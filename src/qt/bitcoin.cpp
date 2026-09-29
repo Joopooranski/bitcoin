@@ -423,14 +423,17 @@ void BitcoinApplication::startOrd()
         maybeStartOrdIndex();
     });
     connect(m_ord_manager.get(), &OrdManager::indexComplete, window, [this] {
-        window->message(tr("Ord synchronized"), tr("The Ord index is synchronized. Use %1 in a terminal for Ordinal operations.").arg(m_ord_manager->executablePath()), CClientUIInterface::MSG_INFORMATION);
+        if (!m_ord_initial_update_complete) {
+            m_ord_initial_update_complete = true;
+            window->message(tr("Ord synchronized"), tr("The Ord index is synchronized. Use %1 in a terminal for Ordinal operations.").arg(m_ord_manager->executablePath()), CClientUIInterface::MSG_INFORMATION);
+        }
     });
     m_ord_manager->start();
 }
 
 void BitcoinApplication::maybeStartOrdIndex()
 {
-    if (!m_ord_manager || !m_ord_manager->isReady() || node().isInitialBlockDownload()) return;
+    if (!m_ord_manager || !m_ord_manager->isReady() || m_ord_manager->isIndexing() || node().isInitialBlockDownload()) return;
     try {
         const UniValue indexes{node().executeRpc("getindexinfo", UniValue{UniValue::VARR}, {})};
         if (!indexes.exists("txindex") || !indexes["txindex"].exists("synced") || !indexes["txindex"]["synced"].get_bool()) return;
@@ -438,8 +441,14 @@ void BitcoinApplication::maybeStartOrdIndex()
         qWarning() << "Unable to query txindex status for Ord:" << e.what();
         return;
     }
-    if (m_ord_sync_timer) m_ord_sync_timer->stop();
-    window->message(tr("Ord indexing"), tr("Bitcoin synchronization is complete. Ord is now building its index in the background."), CClientUIInterface::MSG_INFORMATION);
+    // An index update exits at the current tip. Run it again after a new block
+    // (or a same-height reorg) while Bitcoin Qt remains open.
+    const uint256 tip{node().getBestBlockHash()};
+    if (m_ord_last_update_tip == tip) return;
+    m_ord_last_update_tip = tip;
+    if (!m_ord_initial_update_complete) {
+        window->message(tr("Ord indexing"), tr("Bitcoin synchronization is complete. Ord is now building its index in the background."), CClientUIInterface::MSG_INFORMATION);
+    }
     m_ord_manager->startIndex();
 }
 
