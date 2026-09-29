@@ -103,6 +103,8 @@ private:
     QTimer* m_ord_sync_timer{nullptr};
     std::unique_ptr<OrdManager> m_ord_manager;
     bool m_ord_enabled{false};
+    bool m_ord_initial_update_complete{false};
+    std::optional<uint256> m_ord_last_update_tip;
 #ifdef ENABLE_WALLET
     PaymentServer* paymentServer{nullptr};
     WalletController* m_wallet_controller{nullptr};
