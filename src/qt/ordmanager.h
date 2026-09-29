@@ -27,6 +27,7 @@ public:
     void startIndex();
     void stop();
     bool isReady() const { return !m_executable.isEmpty(); }
+    bool isIndexing() const { return m_index.isRunning(); }
     QString executablePath() const { return m_executable; }
 
 Q_SIGNALS:
