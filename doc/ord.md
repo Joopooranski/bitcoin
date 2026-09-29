@@ -21,6 +21,11 @@ After Bitcoin Core and its transaction index are synchronized, DogMode:
    installs it atomically.
 4. Runs `ord index update` in the background with cookie authentication.
 
+While Bitcoin Qt remains open, it checks the chain tip every 30 seconds and
+reruns `ord index update` after a new block or a same-height reorganization.
+The initial indexing message is shown once; later updates run quietly. An
+indexing failure is reported in the GUI, and a restart also retries the update.
+
 The Ord executable and index are stored below the network-specific Bitcoin data
 directory:
 
